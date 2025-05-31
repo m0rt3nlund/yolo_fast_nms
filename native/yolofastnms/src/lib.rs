@@ -5,7 +5,7 @@ use std::convert::TryInto;
 
 //in the given binary
 const COLUMNS: usize = 8400;
-const ROWS: usize = 84;
+const ROWS: usize = 37;
 const ROW_SIZE: usize = COLUMNS * std::mem::size_of::<f32>();
 
 #[derive(Debug, Clone)]
