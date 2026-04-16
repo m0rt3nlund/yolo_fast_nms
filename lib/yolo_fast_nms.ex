@@ -18,8 +18,9 @@ defmodule YoloFastNMS do
   @default_options [
     prob_threshold: 0.25,
     iou_threshold: 0.5,
-    transpose: true,
-    classes: 1
+    classes: 1,
+    data_items: 0,
+    transpose: true
   ]
 
   @doc """
@@ -46,8 +47,9 @@ defmodule YoloFastNMS do
     options = Keyword.merge(@default_options, options)
     iou_threshold = Keyword.get(options, :iou_threshold, @default_options[:iou_threshold])
     prob_threshold = Keyword.get(options, :prob_threshold, @default_options[:prob_threshold])
-    transpose = Keyword.get(options, :transpose, @default_options[:transpose])
     classes = Keyword.get(options, :classes, @default_options[:classes])
+    data_items = Keyword.get(options, :data_items, @default_options[:data_items])
+    transpose = Keyword.get(options, :transpose, @default_options[:transpose])
 
     {rows, columns} =
       case Nx.shape(tensor) do
@@ -58,7 +60,15 @@ defmodule YoloFastNMS do
 
     tensor
     |> Nx.to_binary()
-    |> run_with_binary(prob_threshold, iou_threshold, rows, columns, classes, transpose)
+    |> run_with_binary(
+      prob_threshold,
+      iou_threshold,
+      rows,
+      columns,
+      classes,
+      data_items,
+      transpose
+    )
   end
 
   @doc """
@@ -87,9 +97,19 @@ defmodule YoloFastNMS do
           rows :: integer(),
           columns :: integer(),
           classes :: integer(),
+          data_items :: integer(),
           transpose :: boolean()
         ) :: [[float()]]
-  def run_with_binary(tensor_binary, _prob_threshold, _iou_threshold, _rows, _columns, _classes,_transpose)
+  def run_with_binary(
+        tensor_binary,
+        _prob_threshold,
+        _iou_threshold,
+        _rows,
+        _columns,
+        _classes,
+        _data_items \\ 0,
+        _transpose \\ false
+      )
       when is_binary(tensor_binary),
       do: :erlang.nif_error(:nif_not_loaded)
 end

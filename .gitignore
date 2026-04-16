@@ -28,5 +28,6 @@ yolo_fast_nms-*.tar
 /tmp/
 
 /priv/native/*.so
+/priv/native/*.dll
 
 .target/

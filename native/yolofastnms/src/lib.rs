@@ -13,7 +13,7 @@ struct BBox {
     cy: i32,
     w: i32,
     h: i32,
-    masks: [f32; 32],
+    data: Vec<f32>,
 }
 
 #[rustler::nif]
@@ -25,6 +25,7 @@ fn run_with_binary<'a>(
     rows: usize,
     columns: usize,
     classes: usize,
+    data_items: usize,
     transpose: bool,
 ) -> NifResult<Term<'a>> {
     // load the matrix `Vec<Vec<f32>>` from binary.
@@ -37,7 +38,7 @@ fn run_with_binary<'a>(
         matrix
     };
 
-    let bboxes = matrix_to_bboxes(&matrix, classes);
+    let bboxes = matrix_to_bboxes(&matrix, classes, data_items);
 
     //keep only the bboxes with prob > prob_threshold
     let filtered_bboxes = bboxes
@@ -61,7 +62,7 @@ fn run_with_binary<'a>(
                 bbox.class as f32,
             ];
 
-            vec.extend(bbox.masks); // Append all elements of masks
+            vec.extend(bbox.data); // Append all elements of data
             vec
         })
         .collect();
@@ -106,14 +107,14 @@ fn binary_to_matrix(binary: &Binary, rows: usize, columns: usize) -> Vec<Vec<f32
         .collect()
 }
 
-fn matrix_to_bboxes(matrix: &Vec<Vec<f32>>, classes: usize) -> Vec<BBox> {
+fn matrix_to_bboxes(matrix: &Vec<Vec<f32>>, classes: usize, data_items: usize) -> Vec<BBox> {
     matrix
         .iter()
-        .map(|row| bbox_from_row(&row, classes))
+        .map(|row| bbox_from_row(&row, classes, data_items))
         .collect()
 }
 
-fn bbox_from_row(row: &Vec<f32>, classes: usize) -> BBox {
+fn bbox_from_row(row: &Vec<f32>, classes: usize, data_items: usize) -> BBox {
     let cx = row[0].round() as i32;
     let cy = row[1].round() as i32;
     let w = row[2].round() as i32;
@@ -131,7 +132,7 @@ fn bbox_from_row(row: &Vec<f32>, classes: usize) -> BBox {
         },
     );
 
-    let masks = get_fixed_slice(row, BBOX_CORDS + classes);
+    let data = get_slice(row, BBOX_CORDS + classes, data_items);
 
     BBox {
         prob: max_prob,
@@ -140,16 +141,16 @@ fn bbox_from_row(row: &Vec<f32>, classes: usize) -> BBox {
         cy,
         w,
         h,
-        masks: masks,
+        data: data,
     }
 }
 
-fn get_fixed_slice(vec: &[f32], start: usize) -> [f32; 32] {
-    if let Ok(fixed_array) = vec[start..].try_into() {
-        return fixed_array;
-    }
-
-    [0.0; 32]
+fn get_slice(vec: &[f32], start: usize, len: usize) -> Vec<f32> {
+    let available = &vec[start..];
+    let take = available.len().min(len);
+    let mut result = available[..take].to_vec();
+    result.resize(len, 0.0);
+    result
 }
 
 fn nms(bboxes: &Vec<BBox>, iou_threshold: f32) -> Vec<BBox> {
